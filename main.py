@@ -6,6 +6,7 @@ import random
 from mongoengine import *
 import asyncio
 from pymongo import MongoClient
+import pymongo
 import config
 
 connect('autorole_db')
@@ -443,23 +444,6 @@ async def on_message(message):
             await client.send_message(message.channel, embed=embed)
             postar.delete()
 
-    elif message.content.startswith("peri.announcementgo "):
-        if not message.author.id == "437608765261479936":
-            return
-        subLen = len(message.content) - len("peri.announcementgo ")
-        suLen = subLen * -1
-        announcementMsg = message.content[suLen:]
-        allServs = client.servers
-        for i in allServs:
-            for f in i.channels:
-                usperms = f.permissions_for(i.me)
-                if str(f.type) != "text" or f.is_private or not usperms.send_messages:
-                    pass
-                else:
-                    embed = discord.Embed(title="ANNOUNCEMENT", description=announcementMsg, color=0x99e70e)
-                    embed.set_author(name="Peribot", icon_url=client.user.avatar_url)
-                    await client.send_message(f, embed=embed)
-
     elif message.content.startswith("peri.suggest "):
         appinfo = await client.application_info()
         owner = appinfo.owner
@@ -485,6 +469,23 @@ async def on_message(message):
         embed.set_author(name="Peribot", icon_url=client.user.avatar_url)
         await client.send_message(message.channel, embed=embed)
 
+    elif message.content.startswith("peri.leaderboard"):
+        member_list = message.server.members
+        id_list = []
+        for mem in member_list:
+            id_list.append(mem.id)
+        leaderboard = ""
+        count = 0
+        for doc in botUsers.find({"id": {"$in": id_list}}).sort('bal', pymongo.DESCENDING):
+            count += 1
+            user_get = discord.utils.get(message.server.members, id=doc['id'])
+            leaderboard += str(count) + ". " + user_get.name + "#" + user_get.discriminator + " - " + str(doc['bal']) + " 💎\n"
+            if count == 5:
+                break
+        embed = discord.Embed(title="Gems Leaderboard:", description=leaderboard, color=0x99e70e)
+        embed.set_author(name="Peribot", icon_url=client.user.avatar_url)
+        embed.set_footer(text="Leaderboard for " + message.server.name, icon_url=message.server.icon_url)
+        await client.send_message(message.channel, embed=embed)
 
 client.run(config.token)
 
